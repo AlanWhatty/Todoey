@@ -22,6 +22,7 @@ class TodoListViewController: UITableViewController {
         newItem.title = "Buy Eggs"
         newItem.done = true
         itemArray.append(newItem)
+//
 //        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
 //            itemArray = items
 //        }
