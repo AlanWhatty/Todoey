@@ -22,6 +22,7 @@ class TodoListViewController: UITableViewController {
      
         loadItems()
 //
+        //
 //        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
 //            itemArray = items
 //        }
@@ -93,7 +94,7 @@ class TodoListViewController: UITableViewController {
             let data = try encoder.encode(itemArray)
             try data.write(to: dataFilePath!)
         } catch {
-            print("Error encodeing item array, \(error)")
+            print("Error when encodeing item array, \(error)")
         }
         
         tableView.reloadData()
@@ -106,7 +107,7 @@ class TodoListViewController: UITableViewController {
             do {
             itemArray = try decoder.decode([Item].self, from: data)
             } catch {
-                print("Error decoding item array, \(error)")
+                print("Error when decoding item array, \(error)")
             }
             
         }
