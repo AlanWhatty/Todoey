@@ -8,9 +8,9 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
     
     let realm = try! Realm()
     
@@ -20,7 +20,9 @@ class CategoryViewController: UITableViewController {
         super.viewDidLoad()
         
         loadCatagories()
-    }
+        
+        tableView.separatorStyle = .none
+     }
 
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         var textField = UITextField()
@@ -31,9 +33,9 @@ class CategoryViewController: UITableViewController {
             // What happens when user clicks the Add Item button on our Alert
             if textField.text! != "" {
                 let newCategory = Category()
-                
                 newCategory.name = textField.text!
-                
+                newCategory.colour = UIColor.randomFlat.hexValue()
+
                 self.save(category: newCategory)
             }
         }
@@ -52,11 +54,18 @@ class CategoryViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return categories?.count ?? 1
     }
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        cell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories Added Yet"
         
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        if let category = categories?[indexPath.row] {
+            cell.textLabel?.text = category.name ?? "No Categories Added Yet"
+            
+            guard let categoryColour = UIColor(hexString: category.colour ?? "1D9BF6") else {fatalError()}
+   
+            cell.backgroundColor = categoryColour
+            cell.textLabel?.textColor = ContrastColorOf(categoryColour, returnFlat: true)
+        }
         return cell
     }
 
@@ -64,6 +73,7 @@ class CategoryViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         performSegue(withIdentifier: "goToItems", sender: self)
     }
+    
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationVC = segue.destination as! TodoListViewController
@@ -75,6 +85,22 @@ class CategoryViewController: UITableViewController {
     }
     
     //MARK: - Data Manipulation Methods
+    
+    //MARK: - Delete data
+    override func updateModel(at indexPath: IndexPath) {
+        if let category = self.categories?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(category)
+                }
+            } catch {
+                print("Error saving context \(error)")
+            }
+        }
+  
+    }
+    
+    //MARK: - Add catagories
     func save(category: Category) {
         
         do {
@@ -95,5 +121,7 @@ class CategoryViewController: UITableViewController {
         
         tableView.reloadData()
     }
+    
 
 }
+

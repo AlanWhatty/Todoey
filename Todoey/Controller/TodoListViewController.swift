@@ -8,8 +8,9 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: SwipeTableViewController {
 
     @IBOutlet weak var searchBar: UISearchBar!
     var todoItems: Results<Item>?
@@ -18,7 +19,9 @@ class TodoListViewController: UITableViewController {
     var selectedCategory : Category? {
         didSet{
             loadItems()
-        }
+            
+            tableView.separatorStyle = .none
+         }
     }
 
     
@@ -28,6 +31,17 @@ class TodoListViewController: UITableViewController {
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         searchBar.delegate = self //as? UISearchBarDelegate
     }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        guard let colourHex = selectedCategory?.colour else {fatalError("Error in  category colour")}
+        updateNavBar(withHexCode: colourHex)
+
+        title = selectedCategory?.name
+     }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(withHexCode: "1D9BF6")
+    }
 
     //MARK - Tableview Datasource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -36,11 +50,17 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         if let item = todoItems?[indexPath.row] {
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
+          
+            if let colour = UIColor(hexString: selectedCategory!.colour!)?.darken(byPercentage: (CGFloat(indexPath.row) / CGFloat(todoItems!.count))) {
+                cell.backgroundColor = colour
+
+                cell.textLabel?.textColor = ContrastColorOf(cell.backgroundColor!, returnFlat: true)
+            }
             
         } else {
             cell.textLabel?.text = "No Items Added"
@@ -48,9 +68,7 @@ class TodoListViewController: UITableViewController {
         
         return cell
     }
-    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        return nil
-    }
+    
     // MARK - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 
@@ -69,6 +87,24 @@ class TodoListViewController: UITableViewController {
 
         tableView.deselectRow(at: indexPath, animated: true)
     }
+    
+    //MARK: - Nav Bat Setup Methods
+    func updateNavBar(withHexCode colourHexCode: String) {
+        guard let navBar = navigationController?.navigationBar else {fatalError("Navivagation Controller does not exist.")}
+        
+        guard let navBarColour = UIColor(hexString: colourHexCode) else {fatalError("Error in colour")}
+        
+        navBar.barTintColor = navBarColour
+        
+        navBar.tintColor = ContrastColorOf(navBarColour, returnFlat: true)
+        
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor : ContrastColorOf(navBarColour, returnFlat: true)]
+        
+        searchBar.barTintColor = navBarColour
+
+    }
+    
+    //MARK - Model Manipulate Methods
 
     //MARK - Add New Items
     @IBAction func addButtonPressed(_ sender: Any) {
@@ -107,8 +143,20 @@ class TodoListViewController: UITableViewController {
 
         present(alert, animated: true, completion: nil)
     }
-    //MARK - Model Manipulate Methods
 
+    //MARK: - Delete data
+    override func updateModel(at indexPath: IndexPath) {
+        if let item = self.todoItems?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(item)
+                }
+            } catch {
+                print("Error saving context \(error)")
+            }
+        }
+    }
+    
     func loadItems() {
         
         todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
